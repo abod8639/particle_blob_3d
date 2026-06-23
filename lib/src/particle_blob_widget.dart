@@ -91,9 +91,6 @@ class _ParticleBlobState extends State<ParticleBlob>
   /// Output buffer: [x0,y0, x1,y1, ...] in screen pixels. Mutated every frame.
   Float32List _projectedPoints = Float32List(0);
 
-  /// BUG-06 fix: single reusable working point — no per-frame allocation.
-  final List<double> _workPoint = [0.0, 0.0, 0.0];
-
   // ── Shader ─────────────────────────────────────────────────────────────────
 
   ui.FragmentProgram? _program; // ARCH-03 fix: stored to prevent premature GC
@@ -214,58 +211,80 @@ class _ParticleBlobState extends State<ParticleBlob>
 
     // Auto-rotation angle derived from time
     final double autoRotY = _time * 0.5;
+    
+    // Precalculate trigonometric functions for the frame
+    final double totalRotY = autoRotY + rotY;
+    final double cosRotY = math.cos(totalRotY);
+    final double sinRotY = math.sin(totalRotY);
+    
+    final double cosRotX = math.cos(rotX);
+    final double sinRotX = math.sin(rotX);
+    
+    // Precalculate time constant for noise function
+    final double time1_5 = _time * 1.5;
+    
+    // Cache variables for touch interaction
+    final bool hasPointer = _isPointerDown && _touchPoint != null;
+    final double touchX = hasPointer ? _touchPoint!.dx : 0.0;
+    final double touchY = hasPointer ? _touchPoint!.dy : 0.0;
+    final double doubleRadius = widget.radius * 2.0;
 
     for (int i = 0; i < count; i++) {
       final int base = i * 3;
 
-      // BUG-06 fix: reuse _workPoint — zero heap allocation per frame
-      _workPoint[0] = _baseSphere[base];
-      _workPoint[1] = _baseSphere[base + 1];
-      _workPoint[2] = _baseSphere[base + 2];
+      // Extract coordinates to local variables (CPU registers)
+      double px = _baseSphere[base];
+      double py = _baseSphere[base + 1];
+      double pz = _baseSphere[base + 2];
 
-      // Apply organic noise displacement (blob morphing)
-      final double noise = BlobMath.fastNoise3D(
-        _workPoint[0], _workPoint[1], _workPoint[2], _time,
-      );
+      // Apply organic noise displacement (blob morphing) inlined
+      final double noise = math.sin(px * 3.0 + _time) * 
+                           math.cos(py * 2.0 - _time) * 
+                           math.sin(pz * 4.0 + time1_5);
+      
       final double displacement = 1.0 + noise * 0.3 * blobiness;
-      _workPoint[0] *= displacement;
-      _workPoint[1] *= displacement;
-      _workPoint[2] *= displacement;
+      px *= displacement;
+      py *= displacement;
+      pz *= displacement;
 
-      // BUG-04 fix: direction-aware touch dispersion
-      // Particles closest to the touch point get pushed away more strongly
-      if (_isPointerDown && _touchPoint != null) {
-        final double px = centerX + _workPoint[0] * widget.radius;
-        final double py = centerY + _workPoint[1] * widget.radius;
-        final double dx = px - _touchPoint!.dx;
-        final double dy = py - _touchPoint!.dy;
+      // Direction-aware touch dispersion
+      if (hasPointer) {
+        final double screenX = centerX + px * widget.radius;
+        final double screenY = centerY + py * widget.radius;
+        final double dx = screenX - touchX;
+        final double dy = screenY - touchY;
         final double dist = math.sqrt(dx * dx + dy * dy);
-        final double influence = (1.0 - (dist / (widget.radius * 2.0)).clamp(0.0, 1.0));
+        final double influence = (1.0 - (dist / doubleRadius).clamp(0.0, 1.0));
         final double pushScale = 1.0 + dispersion * influence * 2.0;
-        _workPoint[0] *= pushScale;
-        _workPoint[1] *= pushScale;
-        _workPoint[2] *= pushScale;
+        px *= pushScale;
+        py *= pushScale;
+        pz *= pushScale;
       } else if (dispersion > 0.0) {
         // Controller-driven uniform radial dispersion
         final double pushScale = 1.0 + dispersion;
-        _workPoint[0] *= pushScale;
-        _workPoint[1] *= pushScale;
-        _workPoint[2] *= pushScale;
+        px *= pushScale;
+        py *= pushScale;
+        pz *= pushScale;
       }
 
-      // Apply rotations: auto-rotation + user drag
-      BlobMath.rotateY(_workPoint, autoRotY + rotY);
-      BlobMath.rotateX(_workPoint, rotX);
+      // Apply rotations (Y-axis first, then X-axis) inlined
+      final double xAfterY = px * cosRotY + pz * sinRotY;
+      final double zAfterY = -px * sinRotY + pz * cosRotY;
+      px = xAfterY;
+      pz = zAfterY;
 
-      // LOGIC-03 fix: perspective projection with clamped Z denominator
-      BlobMath.project(
-        _workPoint,
-        centerX,
-        centerY,
-        widget.radius,
-        _projectedPoints,
-        i * 2,
-      );
+      final double yAfterX = py * cosRotX - pz * sinRotX;
+      final double zAfterX = py * sinRotX + pz * cosRotX;
+      py = yAfterX;
+      pz = zAfterX;
+
+      // Perspective projection with clamped Z denominator inlined
+      final double safeZ = (2.0 + pz).clamp(0.5, 4.0);
+      final double scale = widget.radius / safeZ;
+      
+      final int outIndex = i * 2;
+      _projectedPoints[outIndex] = centerX + px * scale * 2.0;
+      _projectedPoints[outIndex + 1] = centerY + py * scale * 2.0;
     }
   }
 
