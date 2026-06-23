@@ -1,15 +1,20 @@
 name: particle_blob
-description: A sample command-line application.
+description: A highly customizable and performant 3D particle blob effect for Flutter.
 version: 1.0.0
-# repository: https://github.com/my_org/my_repo
 
 environment:
-  sdk: ^3.12.1
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.10.0'
 
-# Add regular dependencies here.
 dependencies:
-  path: ^1.9.0
+  flutter:
+    sdk: flutter
 
 dev_dependencies:
-  lints: ^6.0.0
-  test: ^1.25.6
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  shaders:
+    - shaders/blob.frag
