@@ -38,58 +38,10 @@ class BlobMath {
     return buffer;
   }
 
-  /// Fast 3D noise approximation via sine/cosine wave interference.
-  ///
-  /// Avoids Perlin/Simplex overhead while producing organic, time-varying
-  /// displacement. Returns a value in approximately [-1.0, 1.0].
-  static double fastNoise3D(double x, double y, double z, double time) {
-    return sin(x * 3.0 + time) * cos(y * 2.0 - time) * sin(z * 4.0 + time * 1.5);
-  }
-
   /// Wraps [time] to stay within [0, 2π * 100] to prevent floating-point
   /// precision degradation over long runtimes (LOGIC-01 fix).
   static double wrapTime(double time) {
     const double limit = twoPi * 100.0;
     return time % limit;
-  }
-
-  /// In-place X-axis rotation applied to a [point] buffer at offset [base].
-  /// [base] must be a multiple of 3 (index of x in a flat xyz buffer).
-  static void rotateX(List<double> point, double angle) {
-    final double cosA = cos(angle);
-    final double sinA = sin(angle);
-    final double y = point[1];
-    final double z = point[2];
-    point[1] = y * cosA - z * sinA;
-    point[2] = y * sinA + z * cosA;
-  }
-
-  /// In-place Y-axis rotation.
-  static void rotateY(List<double> point, double angle) {
-    final double cosA = cos(angle);
-    final double sinA = sin(angle);
-    final double x = point[0];
-    final double z = point[2];
-    point[0] = x * cosA + z * sinA;
-    point[2] = -x * sinA + z * cosA;
-  }
-
-  /// Perspective projection: converts a 3D point to a 2D screen position.
-  ///
-  /// LOGIC-03 fix: clamps the Z denominator to [0.5, 4.0] to prevent
-  /// Inf / NaN in the output when [pz] is extreme (e.g., after dispersion).
-  static void project(
-    List<double> point,
-    double centerX,
-    double centerY,
-    double radius,
-    Float32List out,
-    int outIndex,
-  ) {
-    // Clamp to prevent division by zero or negative denominator
-    final double safeZ = (2.0 + point[2]).clamp(0.5, 4.0);
-    final double scale = radius / safeZ;
-    out[outIndex] = centerX + point[0] * scale * 2.0;
-    out[outIndex + 1] = centerY + point[1] * scale * 2.0;
   }
 }
