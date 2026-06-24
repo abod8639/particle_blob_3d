@@ -212,6 +212,9 @@ class _ParticleBlobState extends State<ParticleBlob>
       activeTouches: _activeTouches,
       baseSphere: _baseSphere,
       projectedPoints: _projectedPoints,
+      autoRotationSpeed: _controller.autoRotationSpeed,
+      noiseFrequency: _controller.noiseFrequency,
+      viewDistance: _controller.viewDistance,
     );
   }
 
