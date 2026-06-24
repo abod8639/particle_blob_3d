@@ -106,12 +106,28 @@ class BlobMath {
       py *= displacement;
       pz *= displacement;
 
-      // Direction-aware touch dispersion
-      if (hasPointers) {
-        final double screenX = centerX + px * radius;
-        final double screenY = centerY + py * radius;
-        double extraPush = 0.0;
+      // Apply rotations (Y-axis first, then X-axis) to get fully rotated 3D coordinates
+      final double xAfterY = px * cosRotY + pz * sinRotY;
+      final double zAfterY = -px * sinRotY + pz * cosRotY;
 
+      final double yAfterX = py * cosRotX - zAfterY * sinRotX;
+      final double zAfterX = py * sinRotX + zAfterY * cosRotX;
+
+      double rx = xAfterY;
+      double ry = yAfterX;
+      final double rz = zAfterX;
+
+      // Perspective projection with clamped Z denominator (using viewDistance)
+      final double safeZ = (viewDistance + rz).clamp(0.1, 10.0);
+      final double baseScale = radius / safeZ;
+
+      // Actual projected screen coordinates of the particle (before dispersion)
+      final double screenX = centerX + rx * baseScale * 2.0;
+      final double screenY = centerY + ry * baseScale * 2.0;
+
+      // Direction-aware touch dispersion based on actual screen position
+      double extraPush = 0.0;
+      if (hasPointers) {
         for (int t = 0; t < touchCount; t++) {
           final Offset touch = activeTouches[t];
           final double dx = screenX - touch.dx;
@@ -120,37 +136,19 @@ class BlobMath {
           final double influence = (1.0 - (dist / doubleRadius).clamp(0.0, 1.0));
           extraPush += dispersion * influence * 2.0;
         }
-
-        final double pushScale = 1.0 + extraPush;
-        px *= pushScale;
-        py *= pushScale;
-        pz *= pushScale;
       } else if (dispersion > 0.0) {
         // Controller-driven uniform radial dispersion
-        final double pushScale = 1.0 + dispersion;
-        px *= pushScale;
-        py *= pushScale;
-        pz *= pushScale;
+        extraPush = dispersion;
       }
 
-      // Apply rotations (Y-axis first, then X-axis)
-      final double xAfterY = px * cosRotY + pz * sinRotY;
-      final double zAfterY = -px * sinRotY + pz * cosRotY;
-      px = xAfterY;
-      pz = zAfterY;
-
-      final double yAfterX = py * cosRotX - pz * sinRotX;
-      final double zAfterX = py * sinRotX + pz * cosRotX;
-      py = yAfterX;
-      pz = zAfterX;
-
-      // Perspective projection with clamped Z denominator (using viewDistance)
-      final double safeZ = (viewDistance + pz).clamp(0.1, 10.0);
-      final double scale = radius / safeZ;
+      // Apply dispersion push only to X and Y screen displacements (prevents Z-depth explosion)
+      final double pushScale = 1.0 + extraPush;
+      rx *= pushScale;
+      ry *= pushScale;
 
       final int outIndex = i * 2;
-      projectedPoints[outIndex] = centerX + px * scale * 2.0;
-      projectedPoints[outIndex + 1] = centerY + py * scale * 2.0;
+      projectedPoints[outIndex] = centerX + rx * baseScale * 2.0;
+      projectedPoints[outIndex + 1] = centerY + ry * baseScale * 2.0;
     }
   }
 }
