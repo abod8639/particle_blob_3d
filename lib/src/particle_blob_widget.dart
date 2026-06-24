@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
@@ -214,99 +213,20 @@ class _ParticleBlobState extends State<ParticleBlob>
   // ── Particle Update ────────────────────────────────────────────────────────
 
   void _updateProjectedPoints() {
-    final double centerX = _cachedSize.width / 2.0;
-    final double centerY = _cachedSize.height / 2.0;
-    final int count = widget.particleCount;
-
-    final double blobiness = _controller.blobiness;
-    final double dispersion = _controller.dispersion;
-    final double rotX = _controller.rotationX;
-    final double rotY = _controller.rotationY;
-
-    // Auto-rotation angle derived from time
-    final double autoRotY = _time * 0.5;
-    
-    // Precalculate trigonometric functions for the frame
-    final double totalRotY = autoRotY + rotY;
-    final double cosRotY = math.cos(totalRotY);
-    final double sinRotY = math.sin(totalRotY);
-    
-    final double cosRotX = math.cos(rotX);
-    final double sinRotX = math.sin(rotX);
-    
-    // Precalculate time constant for noise function
-    final double time1_5 = _time * 1.5;
-    
-    // Cache variables for touch interaction
-    final bool hasPointers = _touchPoints.isNotEmpty;
-    final List<Offset> activeTouches = _touchPoints.values.toList();
-    final int touchCount = activeTouches.length;
-    final double doubleRadius = widget.radius * 2.0;
-
-    for (int i = 0; i < count; i++) {
-      final int base = i * 3;
-
-      // Extract coordinates to local variables (CPU registers)
-      double px = _baseSphere[base];
-      double py = _baseSphere[base + 1];
-      double pz = _baseSphere[base + 2];
-
-      // Apply organic noise displacement (blob morphing) inlined
-      final double noise = math.sin(px * 3.0 + _time) * 
-                           math.cos(py * 2.0 - _time) * 
-                           math.sin(pz * 4.0 + time1_5);
-      
-      final double displacement = 1.0 + noise * 0.3 * blobiness;
-      px *= displacement;
-      py *= displacement;
-      pz *= displacement;
-
-      // Direction-aware touch dispersion
-      if (hasPointers) {
-        final double screenX = centerX + px * widget.radius;
-        final double screenY = centerY + py * widget.radius;
-        double extraPush = 0.0;
-        
-        for (int t = 0; t < touchCount; t++) {
-          final Offset touch = activeTouches[t];
-          final double dx = screenX - touch.dx;
-          final double dy = screenY - touch.dy;
-          final double dist = math.sqrt(dx * dx + dy * dy);
-          final double influence = (1.0 - (dist / doubleRadius).clamp(0.0, 1.0));
-          extraPush += dispersion * influence * 2.0;
-        }
-
-        final double pushScale = 1.0 + extraPush;
-        px *= pushScale;
-        py *= pushScale;
-        pz *= pushScale;
-      } else if (dispersion > 0.0) {
-        // Controller-driven uniform radial dispersion
-        final double pushScale = 1.0 + dispersion;
-        px *= pushScale;
-        py *= pushScale;
-        pz *= pushScale;
-      }
-
-      // Apply rotations (Y-axis first, then X-axis) inlined
-      final double xAfterY = px * cosRotY + pz * sinRotY;
-      final double zAfterY = -px * sinRotY + pz * cosRotY;
-      px = xAfterY;
-      pz = zAfterY;
-
-      final double yAfterX = py * cosRotX - pz * sinRotX;
-      final double zAfterX = py * sinRotX + pz * cosRotX;
-      py = yAfterX;
-      pz = zAfterX;
-
-      // Perspective projection with clamped Z denominator inlined
-      final double safeZ = (2.0 + pz).clamp(0.5, 4.0);
-      final double scale = widget.radius / safeZ;
-      
-      final int outIndex = i * 2;
-      _projectedPoints[outIndex] = centerX + px * scale * 2.0;
-      _projectedPoints[outIndex + 1] = centerY + py * scale * 2.0;
-    }
+    BlobMath.projectParticles(
+      count: widget.particleCount,
+      radius: widget.radius,
+      blobiness: _controller.blobiness,
+      dispersion: _controller.dispersion,
+      rotationX: _controller.rotationX,
+      rotationY: _controller.rotationY,
+      time: _time,
+      viewportWidth: _cachedSize.width,
+      viewportHeight: _cachedSize.height,
+      activeTouches: _touchPoints.values.toList(),
+      baseSphere: _baseSphere,
+      projectedPoints: _projectedPoints,
+    );
   }
 
   // ── Shader Uniforms ────────────────────────────────────────────────────────
