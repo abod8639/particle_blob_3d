@@ -42,6 +42,10 @@ class ParticleBlob extends StatefulWidget {
   /// Optional external controller. If null, an internal one is created.
   final ParticleBlobController? controller;
 
+  /// Scale multiplier applied to particle dispersion on touch/tap.
+  /// Range: [0.0, 5.0]. Default: 1.0.
+  final double tapScaleFactor;
+
   /// The gradient used to color the particles.
   final Gradient gradient;
 
@@ -50,11 +54,13 @@ class ParticleBlob extends StatefulWidget {
     this.particleCount = 5000,
     this.radius = 150.0,
     this.pointSize = 2.0,
+    this.tapScaleFactor = 1.0,
     this.controller,
     this.gradient = const LinearGradient(
       colors: [Colors.blueAccent, Colors.purpleAccent],
     ),
-  }) : assert(particleCount > 0, 'particleCount must be greater than 0');
+  }) : assert(particleCount > 0, 'particleCount must be greater than 0'),
+       assert(tapScaleFactor >= 0.0 && tapScaleFactor <= 5.0, 'tapScaleFactor must be between 0.0 and 5.0');
 
   @override
   State<ParticleBlob> createState() => _ParticleBlobState();
@@ -132,7 +138,9 @@ class _ParticleBlobState extends State<ParticleBlob>
     super.initState();
 
     _ownsController = widget.controller == null;
-    _controller = widget.controller ?? ParticleBlobController();
+    _controller = widget.controller ?? ParticleBlobController(
+      tapScaleFactor: widget.tapScaleFactor,
+    );
 
     _generateBuffers(widget.particleCount);
     _loadShader();
@@ -153,7 +161,11 @@ class _ParticleBlobState extends State<ParticleBlob>
     if (oldWidget.controller != widget.controller) {
       if (_ownsController) _controller.dispose();
       _ownsController = widget.controller == null;
-      _controller = widget.controller ?? ParticleBlobController();
+      _controller = widget.controller ?? ParticleBlobController(
+        tapScaleFactor: widget.tapScaleFactor,
+      );
+    } else if (_ownsController && oldWidget.tapScaleFactor != widget.tapScaleFactor) {
+      _controller.setTapScaleFactor(widget.tapScaleFactor);
     }
   }
 
