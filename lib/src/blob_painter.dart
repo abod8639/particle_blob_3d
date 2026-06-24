@@ -18,6 +18,8 @@ class BlobPainter extends CustomPainter {
   /// not on every parent rebuild (ARCH-05 fix).
   final int _generation;
 
+  int get generation => _generation;
+
   BlobPainter({
     required this.positions,
     required int generation,
