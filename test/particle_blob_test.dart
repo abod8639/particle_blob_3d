@@ -3,10 +3,135 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:particle_blob/particle_blob.dart';
+import 'package:particle_blob/src/blob_math.dart';
 import 'package:particle_blob/src/blob_painter.dart';
 import 'package:particle_blob/src/blob_input_listener.dart';
 
 void main() {
+  group('BlobMath Tests', () {
+    test('generateFibonacciSphere generates unit sphere points and asserts invalid inputs', () {
+      expect(
+        () => BlobMath.generateFibonacciSphere(0),
+        throwsAssertionError,
+      );
+
+      final samples = 100;
+      final sphere = BlobMath.generateFibonacciSphere(samples);
+      expect(sphere.length, samples * 3);
+
+      // Verify that all points lie on the unit sphere (distance from origin is 1.0)
+      for (int i = 0; i < samples; i++) {
+        final x = sphere[i * 3];
+        final y = sphere[i * 3 + 1];
+        final z = sphere[i * 3 + 2];
+        final actualDist = (x * x + y * y + z * z);
+        expect(actualDist, closeTo(1.0, 0.0001));
+      }
+    });
+
+    test('generateFibonacciSphere handles single sample case', () {
+      final sphere = BlobMath.generateFibonacciSphere(1);
+      expect(sphere.length, 3);
+      expect(sphere[0], 0.0);
+      expect(sphere[1], 0.0);
+      expect(sphere[2], 0.0);
+    });
+
+    test('wrapTime keeps time wrapped within limits', () {
+      expect(BlobMath.wrapTime(5.0), 5.0);
+
+      // Multiple of the limit should wrap to 0.0
+      final limit = BlobMath.twoPi * 100.0;
+      expect(BlobMath.wrapTime(limit), closeTo(0.0, 0.0001));
+
+      final hugeTime = limit + 3.5;
+      expect(BlobMath.wrapTime(hugeTime), closeTo(3.5, 0.0001));
+    });
+
+    test('projectParticles projects points correctly and applies dispersion/touches', () {
+      final count = 10;
+      final baseSphere = BlobMath.generateFibonacciSphere(count);
+      final projectedBase = Float32List(count * 2);
+      final projectedWithDispersion = Float32List(count * 2);
+      final projectedWithTouches = Float32List(count * 2);
+
+      // 1. Project base points
+      BlobMath.projectParticles(
+        count: count,
+        radius: 100.0,
+        blobiness: 1.0,
+        dispersion: 0.0,
+        rotationX: 0.0,
+        rotationY: 0.0,
+        time: 1.0,
+        viewportWidth: 400.0,
+        viewportHeight: 400.0,
+        activeTouches: const [],
+        baseSphere: baseSphere,
+        projectedPoints: projectedBase,
+        autoRotationSpeed: 0.5,
+        noiseFrequency: 1.0,
+        viewDistance: 2.0,
+      );
+
+      // Verify centered projection
+      for (int i = 0; i < count; i++) {
+        expect(projectedBase[i * 2], isNot(0.0));
+        expect(projectedBase[i * 2 + 1], isNot(0.0));
+      }
+
+      // 2. Project with uniform dispersion
+      BlobMath.projectParticles(
+        count: count,
+        radius: 100.0,
+        blobiness: 1.0,
+        dispersion: 0.5,
+        rotationX: 0.0,
+        rotationY: 0.0,
+        time: 1.0,
+        viewportWidth: 400.0,
+        viewportHeight: 400.0,
+        activeTouches: const [],
+        baseSphere: baseSphere,
+        projectedPoints: projectedWithDispersion,
+        autoRotationSpeed: 0.5,
+        noiseFrequency: 1.0,
+        viewDistance: 2.0,
+      );
+
+      // Verify that dispersion pushes points further from center
+      for (int i = 0; i < count; i++) {
+        final distBaseX = (projectedBase[i * 2] - 200.0).abs();
+        final distDispX = (projectedWithDispersion[i * 2] - 200.0).abs();
+        expect(distDispX, greaterThanOrEqualTo(distBaseX));
+      }
+
+      // 3. Project with active touches
+      BlobMath.projectParticles(
+        count: count,
+        radius: 100.0,
+        blobiness: 1.0,
+        dispersion: 0.5,
+        rotationX: 0.0,
+        rotationY: 0.0,
+        time: 1.0,
+        viewportWidth: 400.0,
+        viewportHeight: 400.0,
+        activeTouches: const [Offset(200, 200)],
+        baseSphere: baseSphere,
+        projectedPoints: projectedWithTouches,
+        autoRotationSpeed: 0.5,
+        noiseFrequency: 1.0,
+        viewDistance: 2.0,
+      );
+
+      // Verify touch push operates
+      for (int i = 0; i < count * 2; i++) {
+        expect(projectedWithTouches[i], isNot(0.0));
+      }
+    });
+  });
+
   group('ParticleBlob Widget Tests', () {
     testWidgets('renders CustomPaint with default settings and asserts on invalid parameters', (tester) async {
       await tester.pumpWidget(
