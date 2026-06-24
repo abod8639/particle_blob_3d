@@ -86,8 +86,9 @@ class _BlobDemoPageState extends State<BlobDemoPage> {
                   controller: _controller,
                   radius: 130,
                   pointSize: _pointSize,
-                  color1: _color1,
-                  color2: _color2,
+                  gradient: LinearGradient(
+                    colors: [_color1, _color2],
+                  ),
                 ),
               ),
             ),
