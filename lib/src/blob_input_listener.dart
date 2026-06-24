@@ -33,8 +33,10 @@ class _BlobInputListenerState extends State<BlobInputListener> {
     }
 
     if (_touchPoints.isNotEmpty) {
-      // Scale dispersion based on the number of active fingers
-      widget.controller.setDispersion(0.4 + 0.2 * _touchPoints.length);
+      // Scale dispersion based on the number of active fingers and the tap scale factor
+      widget.controller.setDispersion(
+        (0.4 + 0.2 * _touchPoints.length) * widget.controller.tapScaleFactor,
+      );
     } else {
       widget.controller.setDispersion(0.0);
     }
