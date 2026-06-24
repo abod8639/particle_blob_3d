@@ -188,7 +188,11 @@ class _ParticleBlobState extends State<ParticleBlob>
   Future<void> _loadShader() async {
     try {
       // ARCH-03: store program as field to prevent premature GC
-      _program = await ui.FragmentProgram.fromAsset('shaders/blob.frag');
+      try {
+        _program = await ui.FragmentProgram.fromAsset('packages/particle_blob/shaders/blob.frag');
+      } catch (_) {
+        _program = await ui.FragmentProgram.fromAsset('shaders/blob.frag');
+      }
       if (mounted) {
         setState(() {
           _shader = _program!.fragmentShader();
