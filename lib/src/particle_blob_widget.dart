@@ -60,7 +60,7 @@ class ParticleBlob extends StatefulWidget {
       colors: [Colors.blueAccent, Colors.purpleAccent],
     ),
   }) : assert(particleCount > 0, 'particleCount must be greater than 0'),
-       assert(tapScaleFactor >= 0.0 && tapScaleFactor <= 5.0, 'tapScaleFactor must be between 0.0 and 5.0');
+       assert(tapScaleFactor >= 0.0, 'tapScaleFactor must be greater than or equal to 0.0');
 
   @override
   State<ParticleBlob> createState() => _ParticleBlobState();
@@ -110,6 +110,10 @@ class _ParticleBlobState extends State<ParticleBlob>
   List<Offset> _activeTouches = const [];
 
   Color get _color1 {
+    if (_controller.isRainbowMode) {
+      final double hue = (_time * 40.0) % 360.0;
+      return HSVColor.fromAHSV(1.0, hue, 0.85, 1.0).toColor();
+    }
     final g = widget.gradient;
     if (g is LinearGradient) return g.colors.first;
     if (g is RadialGradient) return g.colors.first;
@@ -118,6 +122,10 @@ class _ParticleBlobState extends State<ParticleBlob>
   }
 
   Color get _color2 {
+    if (_controller.isRainbowMode) {
+      final double hue = (_time * 40.0 + 60.0) % 360.0;
+      return HSVColor.fromAHSV(1.0, hue, 0.85, 1.0).toColor();
+    }
     final g = widget.gradient;
     if (g is LinearGradient) {
       return g.colors.length > 1 ? g.colors[1] : g.colors.first;
