@@ -23,6 +23,7 @@ class ParticleBlobController extends ChangeNotifier {
   double _autoRotationSpeed = 0.5;
   double _noiseFrequency = 1.0;
   double _viewDistance = 2.0;
+  double _tapScaleFactor = 1.0;
 
   /// Accumulated manual rotation from drag gestures.
   /// LOGIC-02: Managed with damping — decays in the animation ticker rather
@@ -32,9 +33,13 @@ class ParticleBlobController extends ChangeNotifier {
 
   ParticleBlobController({
     double dampingFactor = 0.92,
+    double tapScaleFactor = 1.0,
   }) : _dampingFactor = dampingFactor,
+       _tapScaleFactor = tapScaleFactor,
        assert(dampingFactor >= 0.0 && dampingFactor <= 1.0,
-            'dampingFactor must be between 0.0 and 1.0');
+            'dampingFactor must be between 0.0 and 1.0'),
+       assert(tapScaleFactor >= 0.0 && tapScaleFactor <= 5.0,
+            'tapScaleFactor must be between 0.0 and 5.0');
 
   /// Noise amplitude: how much the sphere surface is displaced.
   /// 0.0 = perfect sphere, higher = more distorted.
@@ -45,6 +50,10 @@ class ParticleBlobController extends ChangeNotifier {
 
   /// Radial dispersion. 0.0 = default shape, 1.0 = particles pushed far out.
   double get dispersion => _dispersion;
+
+  /// Scale multiplier applied to particle dispersion on touch/tap.
+  /// Range: [0.0, 5.0]. Default: 1.0.
+  double get tapScaleFactor => _tapScaleFactor;
 
   /// Damping factor applied each frame: 1.0 = no decay, 0.0 = instant stop.
   /// Range: [0.0, 1.0].
@@ -88,6 +97,15 @@ class ParticleBlobController extends ChangeNotifier {
     final clamped = value.clamp(0.0, 3.0);
     if (_dispersion != clamped) {
       _dispersion = clamped;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the tap scale factor. Clamped to [0.0, 5.0].
+  void setTapScaleFactor(double value) {
+    final clamped = value.clamp(0.0, 5.0);
+    if (_tapScaleFactor != clamped) {
+      _tapScaleFactor = clamped;
       notifyListeners();
     }
   }
