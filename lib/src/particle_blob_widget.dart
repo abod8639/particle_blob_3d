@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'particle_blob_controller.dart';
 import 'blob_math.dart';
 import 'blob_painter.dart';
+import 'blob_input_listener.dart';
 
 /// A high-performance Flutter widget that renders an animated 3D particle blob.
 ///
@@ -102,22 +103,7 @@ class _ParticleBlobState extends State<ParticleBlob>
 
   // ── Touch State ────────────────────────────────────────────────────────────
 
-  final Map<int, Offset> _touchPoints = {};
-
-  void _updateTouchState(PointerEvent event, bool isDown) {
-    if (isDown) {
-      _touchPoints[event.pointer] = event.localPosition;
-    } else {
-      _touchPoints.remove(event.pointer);
-    }
-
-    if (_touchPoints.isNotEmpty) {
-      // Scale dispersion based on the number of fingers
-      _controller.setDispersion(0.4 + 0.2 * _touchPoints.length);
-    } else {
-      _controller.setDispersion(0.0);
-    }
-  }
+  List<Offset> _activeTouches = const [];
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -223,7 +209,7 @@ class _ParticleBlobState extends State<ParticleBlob>
       time: _time,
       viewportWidth: _cachedSize.width,
       viewportHeight: _cachedSize.height,
-      activeTouches: _touchPoints.values.toList(),
+      activeTouches: _activeTouches,
       baseSphere: _baseSphere,
       projectedPoints: _projectedPoints,
     );
@@ -263,51 +249,32 @@ class _ParticleBlobState extends State<ParticleBlob>
       builder: (context, constraints) {
         _cachedSize = constraints.biggest;
 
-        // ARCH-04 fix: MouseRegion enables hover-rotation on desktop/web
-        return MouseRegion(
-          onHover: (event) {
-            if (_touchPoints.isEmpty) {
-              // Subtle auto-nudge on hover (not full drag — just orientation hint)
-              _controller.addRotationImpulse(
-                event.localDelta * 0.3,
-              );
-            }
+        return BlobInputListener(
+          controller: _controller,
+          onTouchesChanged: (touches) {
+            _activeTouches = touches;
           },
-          child: Listener(
-            onPointerDown: (event) => _updateTouchState(event, true),
-            onPointerMove: (event) => _updateTouchState(event, true),
-            onPointerUp: (event) => _updateTouchState(event, false),
-            onPointerCancel: (event) => _updateTouchState(event, false),
-            child: GestureDetector(
-              // Drag: rotation impulse with inertia
-              onPanUpdate: (details) {
-                _controller.addRotationImpulse(details.delta);
-              },
-
-              // BUG-05 fix: ValueListenableBuilder rebuilds ONLY CustomPaint
-              child: ValueListenableBuilder<int>(
-              valueListenable: _frameNotifier,
-              builder: (_, frame, __) {
-                // RepaintBoundary isolates the blob from the rest of the tree
-                return RepaintBoundary(
-                  child: CustomPaint(
-                    painter: BlobPainter(
-                      positions: _projectedPoints,
-                      generation: frame,
-                      shader: _shader,
-                      pointSize: widget.pointSize,
-                      fallbackColor: widget.color1,
-                    ),
-                    size: Size.infinite,
-                    isComplex: true,
-                    willChange: true,
+          child: ValueListenableBuilder<int>(
+            valueListenable: _frameNotifier,
+            builder: (_, frame, __) {
+              // RepaintBoundary isolates the blob from the rest of the tree
+              return RepaintBoundary(
+                child: CustomPaint(
+                  painter: BlobPainter(
+                    positions: _projectedPoints,
+                    generation: frame,
+                    shader: _shader,
+                    pointSize: widget.pointSize,
+                    fallbackColor: widget.color1,
                   ),
-                );
-              },
-            ),
+                  size: Size.infinite,
+                  isComplex: true,
+                  willChange: true,
+                ),
+              );
+            },
           ),
-        )
-      );
+        );
   
       },
     );
