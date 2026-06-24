@@ -61,12 +61,15 @@ class BlobMath {
     required List<Offset> activeTouches,
     required Float32List baseSphere,
     required Float32List projectedPoints,
+    required double autoRotationSpeed,
+    required double noiseFrequency,
+    required double viewDistance,
   }) {
     final double centerX = viewportWidth / 2.0;
     final double centerY = viewportHeight / 2.0;
 
-    // Auto-rotation angle derived from time
-    final double autoRotY = time * 0.5;
+    // Auto-rotation angle derived from time and autoRotationSpeed
+    final double autoRotY = time * autoRotationSpeed;
 
     // Precalculate trigonometric functions for the frame
     final double totalRotY = autoRotY + rotationY;
@@ -92,10 +95,11 @@ class BlobMath {
       double py = baseSphere[base + 1];
       double pz = baseSphere[base + 2];
 
-      // Apply organic noise displacement (blob morphing)
-      final double noise = sin(px * 3.0 + time) *
-                           cos(py * 2.0 - time) *
-                           sin(pz * 4.0 + time1_5);
+      // Apply organic noise displacement (blob morphing) with custom noiseFrequency
+      final double f = noiseFrequency;
+      final double noise = sin(px * 3.0 * f + time) *
+                           cos(py * 2.0 * f - time) *
+                           sin(pz * 4.0 * f + time1_5);
 
       final double displacement = 1.0 + noise * 0.3 * blobiness;
       px *= displacement;
@@ -140,8 +144,8 @@ class BlobMath {
       py = yAfterX;
       pz = zAfterX;
 
-      // Perspective projection with clamped Z denominator
-      final double safeZ = (2.0 + pz).clamp(0.5, 4.0);
+      // Perspective projection with clamped Z denominator (using viewDistance)
+      final double safeZ = (viewDistance + pz).clamp(0.1, 10.0);
       final double scale = radius / safeZ;
 
       final int outIndex = i * 2;
