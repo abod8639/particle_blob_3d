@@ -24,6 +24,7 @@ class ParticleBlobController extends ChangeNotifier {
   double _noiseFrequency = 1.0;
   double _viewDistance = 2.0;
   double _tapScaleFactor = 1.0;
+  bool _isRainbowMode = false;
 
   /// Accumulated manual rotation from drag gestures.
   /// LOGIC-02: Managed with damping — decays in the animation ticker rather
@@ -38,8 +39,8 @@ class ParticleBlobController extends ChangeNotifier {
        _tapScaleFactor = tapScaleFactor,
        assert(dampingFactor >= 0.0 && dampingFactor <= 1.0,
             'dampingFactor must be between 0.0 and 1.0'),
-       assert(tapScaleFactor >= 0.0 && tapScaleFactor <= 5.0,
-            'tapScaleFactor must be between 0.0 and 5.0');
+       assert(tapScaleFactor >= 0.0,
+            'tapScaleFactor must be greater than or equal to 0.0');
 
   /// Noise amplitude: how much the sphere surface is displaced.
   /// 0.0 = perfect sphere, higher = more distorted.
@@ -54,6 +55,9 @@ class ParticleBlobController extends ChangeNotifier {
   /// Scale multiplier applied to particle dispersion on touch/tap.
   /// Range: [0.0, 5.0]. Default: 1.0.
   double get tapScaleFactor => _tapScaleFactor;
+
+  /// Whether the color gradient cycles through a rainbow sequence.
+  bool get isRainbowMode => _isRainbowMode;
 
   /// Damping factor applied each frame: 1.0 = no decay, 0.0 = instant stop.
   /// Range: [0.0, 1.0].
@@ -101,9 +105,9 @@ class ParticleBlobController extends ChangeNotifier {
     }
   }
 
-  /// Sets the tap scale factor. Clamped to [0.0, 5.0].
+  /// Sets the tap scale factor. Clamped to be non-negative.
   void setTapScaleFactor(double value) {
-    final clamped = value.clamp(0.0, 5.0);
+    final clamped = value.clamp(0.0, double.infinity);
     if (_tapScaleFactor != clamped) {
       _tapScaleFactor = clamped;
       notifyListeners();
@@ -142,6 +146,14 @@ class ParticleBlobController extends ChangeNotifier {
     final clamped = value.clamp(0.8, 5.0);
     if (_viewDistance != clamped) {
       _viewDistance = clamped;
+      notifyListeners();
+    }
+  }
+
+  /// Sets whether the color gradient cycles through a rainbow sequence.
+  void setIsRainbowMode(bool value) {
+    if (_isRainbowMode != value) {
+      _isRainbowMode = value;
       notifyListeners();
     }
   }
