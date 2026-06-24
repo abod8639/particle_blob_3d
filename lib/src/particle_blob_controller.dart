@@ -19,6 +19,10 @@ class ParticleBlobController extends ChangeNotifier {
   double _blobiness = 1.0;
   double _speed = 1.0;
   double _dispersion = 0.0;
+  double _dampingFactor;
+  double _autoRotationSpeed = 0.5;
+  double _noiseFrequency = 1.0;
+  double _viewDistance = 2.0;
 
   /// Accumulated manual rotation from drag gestures.
   /// LOGIC-02: Managed with damping — decays in the animation ticker rather
@@ -26,13 +30,10 @@ class ParticleBlobController extends ChangeNotifier {
   double _rotationX = 0.0;
   double _rotationY = 0.0;
 
-  /// Damping factor applied each frame: 1.0 = no decay, 0.0 = instant stop.
-  /// Range: [0.0, 1.0].
-  final double dampingFactor;
-
   ParticleBlobController({
-    this.dampingFactor = 0.92,
-  }) : assert(dampingFactor >= 0.0 && dampingFactor <= 1.0,
+    double dampingFactor = 0.92,
+  }) : _dampingFactor = dampingFactor,
+       assert(dampingFactor >= 0.0 && dampingFactor <= 1.0,
             'dampingFactor must be between 0.0 and 1.0');
 
   /// Noise amplitude: how much the sphere surface is displaced.
@@ -44,6 +45,19 @@ class ParticleBlobController extends ChangeNotifier {
 
   /// Radial dispersion. 0.0 = default shape, 1.0 = particles pushed far out.
   double get dispersion => _dispersion;
+
+  /// Damping factor applied each frame: 1.0 = no decay, 0.0 = instant stop.
+  /// Range: [0.0, 1.0].
+  double get dampingFactor => _dampingFactor;
+
+  /// Constant background auto-rotation speed (Y-axis spin).
+  double get autoRotationSpeed => _autoRotationSpeed;
+
+  /// Noise frequency multiplier: controls how dense/spiky the waves are.
+  double get noiseFrequency => _noiseFrequency;
+
+  /// Perspective/3D depth camera distance.
+  double get viewDistance => _viewDistance;
 
   /// Current accumulated X-axis rotation (from drag, with damping applied).
   double get rotationX => _rotationX;
@@ -78,6 +92,42 @@ class ParticleBlobController extends ChangeNotifier {
     }
   }
 
+  /// Sets the damping factor dynamically. Clamped to [0.0, 1.0].
+  void setDampingFactor(double value) {
+    final clamped = value.clamp(0.0, 1.0);
+    if (_dampingFactor != clamped) {
+      _dampingFactor = clamped;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the background auto-rotation speed. Clamped to [-3.0, 3.0].
+  void setAutoRotationSpeed(double value) {
+    final clamped = value.clamp(-3.0, 3.0);
+    if (_autoRotationSpeed != clamped) {
+      _autoRotationSpeed = clamped;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the noise frequency multiplier. Clamped to [0.1, 5.0].
+  void setNoiseFrequency(double value) {
+    final clamped = value.clamp(0.1, 5.0);
+    if (_noiseFrequency != clamped) {
+      _noiseFrequency = clamped;
+      notifyListeners();
+    }
+  }
+
+  /// Sets the perspective camera distance. Clamped to [0.8, 5.0].
+  void setViewDistance(double value) {
+    final clamped = value.clamp(0.8, 5.0);
+    if (_viewDistance != clamped) {
+      _viewDistance = clamped;
+      notifyListeners();
+    }
+  }
+
   /// Adds an angular velocity impulse from a drag gesture.
   /// Delta is in screen pixels — sensitivity is applied internally.
   void addRotationImpulse(Offset delta) {
@@ -90,8 +140,8 @@ class ParticleBlobController extends ChangeNotifier {
   /// Applies exponential decay to the rotation so it naturally comes to rest.
   /// Returns true if the rotation is still non-negligible (needs repaint).
   bool applyDamping() {
-    _rotationX *= dampingFactor;
-    _rotationY *= dampingFactor;
+    _rotationX *= _dampingFactor;
+    _rotationY *= _dampingFactor;
 
     // Snap to zero below threshold to prevent infinite tiny values
     if (_rotationX.abs() < 0.0001) _rotationX = 0.0;
