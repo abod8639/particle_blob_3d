@@ -41,6 +41,7 @@ class _BlobDemoPageState extends State<BlobDemoPage> {
   double _blobiness = 1.0;
   double _speed = 1.0;
   double _pointSize = 2.0;
+  double _tapScaleFactor = 1.0;
   Color _color1 = Colors.pinkAccent;
   Color _color2 = Colors.deepPurpleAccent;
 
@@ -86,6 +87,7 @@ class _BlobDemoPageState extends State<BlobDemoPage> {
                   controller: _controller,
                   radius: 130,
                   pointSize: _pointSize,
+                  tapScaleFactor: _tapScaleFactor,
                   gradient: LinearGradient(
                     colors: [_color1, _color2],
                   ),
@@ -163,6 +165,16 @@ class _BlobDemoPageState extends State<BlobDemoPage> {
                     max: 5.0,
                     onChanged: (v) {
                       setState(() => _pointSize = v);
+                    },
+                  ),
+                  _buildSlider(
+                    label: 'Tap Scale',
+                    value: _tapScaleFactor,
+                    min: 0.0,
+                    max: 3.0,
+                    onChanged: (v) {
+                      setState(() => _tapScaleFactor = v);
+                      _controller.setTapScaleFactor(v);
                     },
                   ),
                 ],
