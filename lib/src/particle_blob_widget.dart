@@ -103,8 +103,22 @@ class _ParticleBlobState extends State<ParticleBlob>
 
   // ── Touch State ────────────────────────────────────────────────────────────
 
-  Offset? _touchPoint;
-  bool _isPointerDown = false;
+  final Map<int, Offset> _touchPoints = {};
+
+  void _updateTouchState(PointerEvent event, bool isDown) {
+    if (isDown) {
+      _touchPoints[event.pointer] = event.localPosition;
+    } else {
+      _touchPoints.remove(event.pointer);
+    }
+
+    if (_touchPoints.isNotEmpty) {
+      // Scale dispersion based on the number of fingers
+      _controller.setDispersion(0.4 + 0.2 * _touchPoints.length);
+    } else {
+      _controller.setDispersion(0.0);
+    }
+  }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -224,9 +238,9 @@ class _ParticleBlobState extends State<ParticleBlob>
     final double time1_5 = _time * 1.5;
     
     // Cache variables for touch interaction
-    final bool hasPointer = _isPointerDown && _touchPoint != null;
-    final double touchX = hasPointer ? _touchPoint!.dx : 0.0;
-    final double touchY = hasPointer ? _touchPoint!.dy : 0.0;
+    final bool hasPointers = _touchPoints.isNotEmpty;
+    final List<Offset> activeTouches = _touchPoints.values.toList();
+    final int touchCount = activeTouches.length;
     final double doubleRadius = widget.radius * 2.0;
 
     for (int i = 0; i < count; i++) {
@@ -248,14 +262,21 @@ class _ParticleBlobState extends State<ParticleBlob>
       pz *= displacement;
 
       // Direction-aware touch dispersion
-      if (hasPointer) {
+      if (hasPointers) {
         final double screenX = centerX + px * widget.radius;
         final double screenY = centerY + py * widget.radius;
-        final double dx = screenX - touchX;
-        final double dy = screenY - touchY;
-        final double dist = math.sqrt(dx * dx + dy * dy);
-        final double influence = (1.0 - (dist / doubleRadius).clamp(0.0, 1.0));
-        final double pushScale = 1.0 + dispersion * influence * 2.0;
+        double extraPush = 0.0;
+        
+        for (int t = 0; t < touchCount; t++) {
+          final Offset touch = activeTouches[t];
+          final double dx = screenX - touch.dx;
+          final double dy = screenY - touch.dy;
+          final double dist = math.sqrt(dx * dx + dy * dy);
+          final double influence = (1.0 - (dist / doubleRadius).clamp(0.0, 1.0));
+          extraPush += dispersion * influence * 2.0;
+        }
+
+        final double pushScale = 1.0 + extraPush;
         px *= pushScale;
         py *= pushScale;
         pz *= pushScale;
@@ -325,38 +346,26 @@ class _ParticleBlobState extends State<ParticleBlob>
         // ARCH-04 fix: MouseRegion enables hover-rotation on desktop/web
         return MouseRegion(
           onHover: (event) {
-            if (!_isPointerDown) {
+            if (_touchPoints.isEmpty) {
               // Subtle auto-nudge on hover (not full drag — just orientation hint)
               _controller.addRotationImpulse(
                 event.localDelta * 0.3,
               );
             }
           },
-          child: GestureDetector(
-            // Drag: rotation impulse with inertia
-            onPanUpdate: (details) {
-              _controller.addRotationImpulse(details.delta);
-            },
+          child: Listener(
+            onPointerDown: (event) => _updateTouchState(event, true),
+            onPointerMove: (event) => _updateTouchState(event, true),
+            onPointerUp: (event) => _updateTouchState(event, false),
+            onPointerCancel: (event) => _updateTouchState(event, false),
+            child: GestureDetector(
+              // Drag: rotation impulse with inertia
+              onPanUpdate: (details) {
+                _controller.addRotationImpulse(details.delta);
+              },
 
-            // Tap down: direction-aware touch dispersion (BUG-04 fix)
-            onPanDown: (details) {
-              _isPointerDown = true;
-              _touchPoint = details.localPosition;
-              _controller.setDispersion(0.6);
-            },
-            onPanEnd: (_) {
-              _isPointerDown = false;
-              _touchPoint = null;
-              _controller.setDispersion(0.0);
-            },
-            onPanCancel: () {
-              _isPointerDown = false;
-              _touchPoint = null;
-              _controller.setDispersion(0.0);
-            },
-
-            // BUG-05 fix: ValueListenableBuilder rebuilds ONLY CustomPaint
-            child: ValueListenableBuilder<int>(
+              // BUG-05 fix: ValueListenableBuilder rebuilds ONLY CustomPaint
+              child: ValueListenableBuilder<int>(
               valueListenable: _frameNotifier,
               builder: (_, frame, __) {
                 // RepaintBoundary isolates the blob from the rest of the tree
@@ -377,7 +386,9 @@ class _ParticleBlobState extends State<ParticleBlob>
               },
             ),
           ),
-        );
+        )
+      );
+  
       },
     );
   }
