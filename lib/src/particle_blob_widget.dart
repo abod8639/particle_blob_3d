@@ -42,11 +42,8 @@ class ParticleBlob extends StatefulWidget {
   /// Optional external controller. If null, an internal one is created.
   final ParticleBlobController? controller;
 
-  /// Primary gradient color injected into the fragment shader.
-  final Color color1;
-
-  /// Secondary gradient color injected into the fragment shader.
-  final Color color2;
+  /// The gradient used to color the particles.
+  final Gradient gradient;
 
   const ParticleBlob({
     super.key,
@@ -54,8 +51,9 @@ class ParticleBlob extends StatefulWidget {
     this.radius = 150.0,
     this.pointSize = 2.0,
     this.controller,
-    this.color1 = Colors.pinkAccent,
-    this.color2 = Colors.purpleAccent,
+    this.gradient = const LinearGradient(
+      colors: [Colors.blueAccent, Colors.purpleAccent],
+    ),
   }) : assert(particleCount > 0, 'particleCount must be greater than 0');
 
   @override
@@ -104,6 +102,28 @@ class _ParticleBlobState extends State<ParticleBlob>
   // ── Touch State ────────────────────────────────────────────────────────────
 
   List<Offset> _activeTouches = const [];
+
+  Color get _color1 {
+    final g = widget.gradient;
+    if (g is LinearGradient) return g.colors.first;
+    if (g is RadialGradient) return g.colors.first;
+    if (g is SweepGradient) return g.colors.first;
+    return Colors.pinkAccent;
+  }
+
+  Color get _color2 {
+    final g = widget.gradient;
+    if (g is LinearGradient) {
+      return g.colors.length > 1 ? g.colors[1] : g.colors.first;
+    }
+    if (g is RadialGradient) {
+      return g.colors.length > 1 ? g.colors[1] : g.colors.first;
+    }
+    if (g is SweepGradient) {
+      return g.colors.length > 1 ? g.colors[1] : g.colors.first;
+    }
+    return Colors.purpleAccent;
+  }
 
   // ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -230,16 +250,19 @@ class _ParticleBlobState extends State<ParticleBlob>
     s.setFloat(1, _cachedSize.height);
     s.setFloat(2, _time);
 
-    // BUG-03 fix: use .r/.g/.b/.a (normalized 0.0–1.0, non-deprecated API)
-    s.setFloat(3, widget.color1.r);
-    s.setFloat(4, widget.color1.g);
-    s.setFloat(5, widget.color1.b);
-    s.setFloat(6, widget.color1.a);
+    final c1 = _color1;
+    final c2 = _color2;
 
-    s.setFloat(7, widget.color2.r);
-    s.setFloat(8, widget.color2.g);
-    s.setFloat(9, widget.color2.b);
-    s.setFloat(10, widget.color2.a);
+    // BUG-03 fix: use .r/.g/.b/.a (normalized 0.0–1.0, non-deprecated API)
+    s.setFloat(3, c1.r);
+    s.setFloat(4, c1.g);
+    s.setFloat(5, c1.b);
+    s.setFloat(6, c1.a);
+
+    s.setFloat(7, c2.r);
+    s.setFloat(8, c2.g);
+    s.setFloat(9, c2.b);
+    s.setFloat(10, c2.a);
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -268,7 +291,7 @@ class _ParticleBlobState extends State<ParticleBlob>
                     generation: frame,
                     shader: _shader,
                     pointSize: widget.pointSize,
-                    fallbackColor: widget.color1,
+                    fallbackColor: _color1,
                   ),
                   size: Size.infinite,
                   isComplex: true,
