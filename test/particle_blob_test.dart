@@ -497,6 +497,79 @@ void main() {
       await tester.pump();
       expect(controller.dispersion, 0.0);
     });
+
+    testWidgets('mouse hover triggers subtle rotation impulse when no active touches', (tester) async {
+      final controller = ParticleBlobController();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Align(
+              alignment: Alignment.topLeft,
+              child: BlobInputListener(
+                controller: controller,
+                onTouchesChanged: (_) {},
+                child: const SizedBox(width: 200, height: 200),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Create a hover gesture
+      final gesture = await tester.createGesture(kind: ui.PointerDeviceKind.mouse);
+      await gesture.addPointer(location: const Offset(50, 50));
+      await tester.pump();
+
+      // Reset controller rotation to test the delta
+      controller.resetRotation();
+
+      // Move mouse pointer (triggers onHover)
+      await gesture.moveTo(const Offset(60, 80));
+      await tester.pump();
+
+      // Delta is (10, 30).
+      // rotationX should increase by delta.dy * 0.3 * 0.005 = 30 * 0.0015 = 0.045
+      // rotationY should increase by delta.dx * 0.3 * 0.005 = 10 * 0.0015 = 0.015
+      expect(controller.rotationX, closeTo(0.045, 0.0001));
+      expect(controller.rotationY, closeTo(0.015, 0.0001));
+
+      await gesture.removePointer();
+    });
+
+    testWidgets('pointer cancel removes touch points and resets dispersion', (tester) async {
+      final controller = ParticleBlobController();
+      List<Offset> touches = [];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: BlobInputListener(
+              controller: controller,
+              onTouchesChanged: (t) {
+                touches = t;
+              },
+              child: const SizedBox(width: 200, height: 200),
+            ),
+          ),
+        ),
+      );
+
+      // Start gesture
+      final gesture = await tester.startGesture(const Offset(100, 100));
+      await tester.pump();
+
+      expect(touches.length, 1);
+      expect(controller.dispersion, greaterThan(0.0));
+
+      // Cancel gesture
+      await gesture.cancel();
+      await tester.pump();
+
+      expect(touches.isEmpty, true);
+      expect(controller.dispersion, 0.0);
+    });
   });
 
   group('BlobPainter Tests', () {
