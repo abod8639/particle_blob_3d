@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:particle_blob/particle_blob.dart';
@@ -371,4 +373,99 @@ void main() {
       expect(controller.dispersion, 0.0);
     });
   });
+
+  group('BlobPainter Tests', () {
+    test('shouldRepaint detects changes correctly', () {
+      final positions1 = Float32List(10);
+      final positions2 = Float32List(10);
+      final painter1 = BlobPainter(
+        positions: positions1,
+        generation: 1,
+        pointSize: 2.0,
+        fallbackColor: Colors.red,
+      );
+
+      final painterSame = BlobPainter(
+        positions: positions1,
+        generation: 1,
+        pointSize: 2.0,
+        fallbackColor: Colors.red,
+      );
+
+      final painterDiffGen = BlobPainter(
+        positions: positions1,
+        generation: 2,
+        pointSize: 2.0,
+        fallbackColor: Colors.red,
+      );
+
+      final painterDiffSize = BlobPainter(
+        positions: positions1,
+        generation: 1,
+        pointSize: 3.0,
+        fallbackColor: Colors.red,
+      );
+
+      final painterDiffColor = BlobPainter(
+        positions: positions2,
+        generation: 1,
+        pointSize: 2.0,
+        fallbackColor: Colors.blue,
+      );
+
+      expect(painter1.shouldRepaint(painterSame), false);
+      expect(painter1.shouldRepaint(painterDiffGen), true);
+      expect(painter1.shouldRepaint(painterDiffSize), true);
+      expect(painter1.shouldRepaint(painterDiffColor), true);
+    });
+
+    test('paint method skips when positions are empty', () {
+      final canvas = _MockCanvas();
+      final painter = BlobPainter(
+        positions: Float32List(0),
+        generation: 1,
+        pointSize: 2.0,
+        fallbackColor: Colors.red,
+      );
+      painter.paint(canvas, Size.zero);
+      expect(canvas.drawRawPointsCallCount, 0);
+    });
+
+    test('paint method draws points on canvas with fallback color when shader is null', () {
+      final canvas = _MockCanvas();
+      final positions = Float32List.fromList([10.0, 20.0, 30.0, 40.0]);
+      final painter = BlobPainter(
+        positions: positions,
+        generation: 1,
+        pointSize: 3.0,
+        fallbackColor: Colors.green,
+      );
+      painter.paint(canvas, Size.zero);
+
+      expect(canvas.drawRawPointsCallCount, 1);
+      expect(canvas.pointMode, ui.PointMode.points);
+      expect(canvas.points, positions);
+      expect(canvas.paint?.strokeWidth, 3.0);
+      expect(canvas.paint?.strokeCap, StrokeCap.round);
+      expect(canvas.paint?.isAntiAlias, true);
+      expect(canvas.paint?.color, Colors.green);
+      expect(canvas.paint?.shader, isNull);
+    });
+
+  });
+}
+
+class _MockCanvas extends Fake implements Canvas {
+  int drawRawPointsCallCount = 0;
+  ui.PointMode? pointMode;
+  Float32List? points;
+  Paint? paint;
+
+  @override
+  void drawRawPoints(ui.PointMode pointMode, Float32List points, Paint paint) {
+    drawRawPointsCallCount++;
+    this.pointMode = pointMode;
+    this.points = points;
+    this.paint = paint;
+  }
 }
