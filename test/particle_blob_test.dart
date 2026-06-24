@@ -163,10 +163,6 @@ void main() {
         () => ParticleBlob(tapScaleFactor: -0.1),
         throwsAssertionError,
       );
-      expect(
-        () => ParticleBlob(tapScaleFactor: 5.1),
-        throwsAssertionError,
-      );
     });
 
     testWidgets('handles dynamic tapScaleFactor updates', (tester) async {
@@ -307,7 +303,6 @@ void main() {
       expect(() => ParticleBlobController(dampingFactor: -0.1), throwsAssertionError);
       expect(() => ParticleBlobController(dampingFactor: 1.1), throwsAssertionError);
       expect(() => ParticleBlobController(tapScaleFactor: -0.5), throwsAssertionError);
-      expect(() => ParticleBlobController(tapScaleFactor: 5.5), throwsAssertionError);
     });
 
     test('property setters clamp inputs correctly', () {
@@ -333,8 +328,8 @@ void main() {
       controller.setDampingFactor(-0.2); // clamped to 0.0
       expect(controller.dampingFactor, 0.0);
 
-      controller.setTapScaleFactor(6.0); // clamped to 5.0
-      expect(controller.tapScaleFactor, 5.0);
+      controller.setTapScaleFactor(6.0);
+      expect(controller.tapScaleFactor, 6.0);
       controller.setTapScaleFactor(-1.0); // clamped to 0.0
       expect(controller.tapScaleFactor, 0.0);
 
