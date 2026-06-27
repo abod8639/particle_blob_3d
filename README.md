@@ -78,8 +78,12 @@ ParticleBlob(
   particleCount: 5000,
   radius: 130,
   pointSize: 2.0,
-  color1: Colors.pinkAccent,
-  color2: Colors.deepPurpleAccent,
+  tapScaleFactor: 1.0,
+  gradient: LinearGradient(
+    colors: [Colors.pinkAccent, Colors.deepPurpleAccent],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  ),
 )
 ```
 
@@ -87,17 +91,22 @@ ParticleBlob(
 
 ## Controller Usage
 
-You can use the `ParticleBlobController` to programmatically change the blob's shape, speed, and interaction state at runtime. This is great for animating the blob during external events.
+You can use the `ParticleBlobController` to programmatically change the blob's shape, speed, and interaction state at runtime. This is great for animating the blob during external events or linking it to user interface controls.
 
 ```dart
 final ParticleBlobController _controller = ParticleBlobController(
-  dampingFactor: 0.93, // Inertia applied to rotations
+  dampingFactor: 0.93, // Inertia applied to rotations (0.0 - 1.0)
+  tapScaleFactor: 1.0, // Scale multiplier for touch dispersion
 );
 
-// Somewhere in your code:
-_controller.setBlobiness(2.5); // Increase the noise distortion
-_controller.setSpeed(3.0); // Make it animate faster
-_controller.setDispersion(0.8); // Blow the particles outwards
+// Programmatic updates:
+_controller.setBlobiness(2.5);        // Increase noise distortion (0.0 to 5.0)
+_controller.setSpeed(3.0);            // Animation speed multiplier (0.0 to 10.0)
+_controller.setDispersion(0.8);       // Blow particles outwards radially (0.0 to 3.0)
+_controller.setAutoRotationSpeed(1.0); // Constant background rotation speed (-3.0 to 3.0)
+_controller.setNoiseFrequency(2.0);   // Spikiness/density of waves (0.1 to 5.0)
+_controller.setViewDistance(2.0);      // Perspective camera distance (0.8 to 5.0)
+_controller.setIsRainbowMode(true);   // Cycle colors through rainbow spectrum
 
 // Don't forget to dispose!
 @override
@@ -111,14 +120,30 @@ void dispose() {
 
 ## Customization Properties
 
+### Widget Properties (`ParticleBlob`)
+
 | Property | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
 | `particleCount` | `int` | `5000` | Total number of particles to render. |
 | `radius` | `double` | `150.0` | Base radius of the 3D sphere in logical pixels. |
 | `pointSize` | `double` | `2.0` | Render size of each individual particle. |
-| `color1` | `Color` | `Colors.pinkAccent` | Primary gradient color passed to the fragment shader. |
-| `color2` | `Color` | `Colors.purpleAccent` | Secondary gradient color passed to the fragment shader. |
+| `tapScaleFactor` | `double` | `1.0` | Scale multiplier applied to particle dispersion on touch/tap. |
+| `gradient` | `Gradient` | `LinearGradient(colors: [Colors.blueAccent, Colors.purpleAccent])` | The gradient colors used to color the particles. |
 | `controller` | `ParticleBlobController?`| `null` | External controller for runtime physics and animation changes. |
+
+### Controller Configuration & Properties (`ParticleBlobController`)
+
+| Property/Method | Type | Default | Range | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `dampingFactor` | `double` | `0.92` | `0.0` - `1.0` | Speed at which drag rotation decays. |
+| `tapScaleFactor` | `double` | `1.0` | `>= 0.0` | Dispersion scale multiplier. |
+| `blobiness` / `setBlobiness()` | `double` | `1.0` | `0.0` - `5.0` | Noise amplitude (displacement from perfect sphere). |
+| `speed` / `setSpeed()` | `double` | `1.0` | `0.0` - `10.0` | Animation speed multiplier. |
+| `dispersion` / `setDispersion()` | `double` | `0.0` | `0.0` - `3.0` | Manual base radial dispersion. |
+| `autoRotationSpeed` / `setAutoRotationSpeed()` | `double` | `0.5` | `-3.0` - `3.0` | Continuous spin velocity. |
+| `noiseFrequency` / `setNoiseFrequency()` | `double` | `1.0` | `0.1` - `5.0` | Wave density/frequency. |
+| `viewDistance` / `setViewDistance()` | `double` | `2.0` | `0.8` - `5.0` | 3D perspective camera/view distance. |
+| `isRainbowMode` / `setIsRainbowMode()` | `bool` | `false` | `true`/`false` | Cycle colors through the HSV rainbow. |
 
 ---
 
