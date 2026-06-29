@@ -3,11 +3,11 @@ import 'package:particle_blob/particle_blob.dart';
 import 'dart:math';
 
 void main() {
-  runApp(const AICoreApp());
+  runApp(const ParticleBlobExampleApp());
 }
 
-class AICoreApp extends StatelessWidget {
-  const AICoreApp({super.key});
+class ParticleBlobExampleApp extends StatelessWidget {
+  const ParticleBlobExampleApp({super.key});
 
   @override
   Widget build(BuildContext context) {
