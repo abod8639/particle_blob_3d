@@ -297,35 +297,44 @@ class _ParticleBlobState extends State<ParticleBlob>
     // caches it for use in the ticker, avoiding MediaQuery inside the ticker.
     return LayoutBuilder(
       builder: (context, constraints) {
-        _cachedSize = constraints.biggest;
+        final double width = constraints.hasBoundedWidth
+            ? constraints.maxWidth
+            : (widget.radius * 2.0);
+        final double height = constraints.hasBoundedHeight
+            ? constraints.maxHeight
+            : (widget.radius * 2.0);
+        _cachedSize = Size(width, height);
 
-        return BlobInputListener(
-          controller: _controller,
-          onTouchesChanged: (touches) {
-            _activeTouches = touches;
-          },
-          child: ValueListenableBuilder<int>(
-            valueListenable: _frameNotifier,
-            builder: (_, frame, __) {
-              // RepaintBoundary isolates the blob from the rest of the tree
-              return RepaintBoundary(
-                child: CustomPaint(
-                  painter: BlobPainter(
-                    positions: _projectedPoints,
-                    generation: frame,
-                    shader: _shader,
-                    pointSize: widget.pointSize,
-                    fallbackColor: _color1,
-                  ),
-                  size: Size.infinite,
-                  isComplex: true,
-                  willChange: true,
-                ),
-              );
+        return SizedBox(
+          width: width,
+          height: height,
+          child: BlobInputListener(
+            controller: _controller,
+            onTouchesChanged: (touches) {
+              _activeTouches = touches;
             },
+            child: ValueListenableBuilder<int>(
+              valueListenable: _frameNotifier,
+              builder: (_, frame, __) {
+                // RepaintBoundary isolates the blob from the rest of the tree
+                return RepaintBoundary(
+                  child: CustomPaint(
+                    painter: BlobPainter(
+                      positions: _projectedPoints,
+                      generation: frame,
+                      shader: _shader,
+                      pointSize: widget.pointSize,
+                      fallbackColor: _color1,
+                    ),
+                    size: Size.infinite,
+                    isComplex: true,
+                    willChange: true,
+                  ),
+                );
+              },
+            ),
           ),
         );
-  
       },
     );
   }
