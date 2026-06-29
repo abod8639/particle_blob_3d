@@ -59,8 +59,9 @@ class ParticleBlob extends StatefulWidget {
     this.gradient = const LinearGradient(
       colors: [Colors.blueAccent, Colors.purpleAccent],
     ),
-  }) : assert(particleCount > 0, 'particleCount must be greater than 0'),
-       assert(tapScaleFactor >= 0.0, 'tapScaleFactor must be greater than or equal to 0.0');
+  })  : assert(particleCount > 0, 'particleCount must be greater than 0'),
+        assert(tapScaleFactor >= 0.0,
+            'tapScaleFactor must be greater than or equal to 0.0');
 
   @override
   State<ParticleBlob> createState() => _ParticleBlobState();
@@ -146,9 +147,10 @@ class _ParticleBlobState extends State<ParticleBlob>
     super.initState();
 
     _ownsController = widget.controller == null;
-    _controller = widget.controller ?? ParticleBlobController(
-      tapScaleFactor: widget.tapScaleFactor,
-    );
+    _controller = widget.controller ??
+        ParticleBlobController(
+          tapScaleFactor: widget.tapScaleFactor,
+        );
 
     _generateBuffers(widget.particleCount);
     _loadShader();
@@ -169,10 +171,12 @@ class _ParticleBlobState extends State<ParticleBlob>
     if (oldWidget.controller != widget.controller) {
       if (_ownsController) _controller.dispose();
       _ownsController = widget.controller == null;
-      _controller = widget.controller ?? ParticleBlobController(
-        tapScaleFactor: widget.tapScaleFactor,
-      );
-    } else if (_ownsController && oldWidget.tapScaleFactor != widget.tapScaleFactor) {
+      _controller = widget.controller ??
+          ParticleBlobController(
+            tapScaleFactor: widget.tapScaleFactor,
+          );
+    } else if (_ownsController &&
+        oldWidget.tapScaleFactor != widget.tapScaleFactor) {
       _controller.setTapScaleFactor(widget.tapScaleFactor);
     }
   }
@@ -197,7 +201,8 @@ class _ParticleBlobState extends State<ParticleBlob>
     try {
       // ARCH-03: store program as field to prevent premature GC
       try {
-        _program = await ui.FragmentProgram.fromAsset('packages/particle_blob/shaders/blob.frag');
+        _program = await ui.FragmentProgram.fromAsset(
+            'packages/particle_blob/shaders/blob.frag');
       } catch (_) {
         _program = await ui.FragmentProgram.fromAsset('shaders/blob.frag');
       }
@@ -219,8 +224,8 @@ class _ParticleBlobState extends State<ParticleBlob>
 
     // ARCH-02 fix: use actual frame delta, clamped to prevent spiral of death
     // (e.g., after app backgrounding, elapsed jumps massively)
-    final double dt = ((elapsed - _lastElapsed).inMicroseconds / 1e6)
-        .clamp(0.0, 0.05);
+    final double dt =
+        ((elapsed - _lastElapsed).inMicroseconds / 1e6).clamp(0.0, 0.05);
     _lastElapsed = elapsed;
 
     // Advance time with speed multiplier; wrap to prevent float precision loss
@@ -325,7 +330,6 @@ class _ParticleBlobState extends State<ParticleBlob>
             },
           ),
         );
-  
       },
     );
   }
