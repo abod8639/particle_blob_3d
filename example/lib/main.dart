@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:particle_blob/particle_blob.dart';
 import 'dart:math';
+import 'package:flutter/scheduler.dart';
+
 
 void main() {
   runApp(const ParticleBlobExampleApp());
@@ -175,33 +177,43 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
           ),
           
           // Main blob
-          Row(
-            children: [
-              ParticleBlob(
-                tapScaleFactor: 1.1,
-                  gradient: LinearGradient(
-                  colors: [_color1, _color2],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                particleCount: _particleCount,
-                radius: _baseRadius,
-                pointSize: _pointSize,
-                controller: _blobController,
+          BouncingBlobWrapper(
+            radius: _baseRadius,
+            initialX: 50.0,
+            initialY: 150.0,
+            initialVx: 120.0,
+            initialVy: 90.0,
+            child: ParticleBlob(
+              tapScaleFactor: 1.1,
+              gradient: LinearGradient(
+                colors: [_color1, _color2],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-              ParticleBlob(
-                tapScaleFactor: 1.1,
-                  gradient: LinearGradient(
-                  colors: [_color1, _color2],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                ),
-                particleCount: _particleCount,
-                radius: _baseRadius,
-                pointSize: _pointSize,
-                controller: _blobController,
+              particleCount: _particleCount,
+              radius: _baseRadius,
+              pointSize: _pointSize,
+              controller: _blobController,
+            ),
+          ),
+          BouncingBlobWrapper(
+            radius: _baseRadius,
+            initialX: 250.0,
+            initialY: 350.0,
+            initialVx: -95.0,
+            initialVy: 140.0,
+            child: ParticleBlob(
+              tapScaleFactor: 1.1,
+              gradient: LinearGradient(
+                colors: [_color1, _color2],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
-            ],
+              particleCount: _particleCount,
+              radius: _baseRadius,
+              pointSize: _pointSize,
+              controller: _blobController,
+            ),
           ),
           
           // UI Overlay
@@ -811,4 +823,101 @@ class _ThemePreset {
   final Color c1;
   final Color c2;
   const _ThemePreset(this.name, this.c1, this.c2);
+}
+
+class BouncingBlobWrapper extends StatefulWidget {
+  final Widget child;
+  final double radius;
+  final double initialX;
+  final double initialY;
+  final double initialVx;
+  final double initialVy;
+
+  const BouncingBlobWrapper({
+    super.key,
+    required this.child,
+    required this.radius,
+    required this.initialX,
+    required this.initialY,
+    required this.initialVx,
+    required this.initialVy,
+  });
+
+  @override
+  State<BouncingBlobWrapper> createState() => _BouncingBlobWrapperState();
+}
+
+class _BouncingBlobWrapperState extends State<BouncingBlobWrapper>
+    with SingleTickerProviderStateMixin {
+  late final Ticker _ticker;
+  late double _x;
+  late double _y;
+  late double _vx;
+  late double _vy;
+  double _lastTime = 0.0;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _x = widget.initialX;
+    _y = widget.initialY;
+    _vx = widget.initialVx;
+    _vy = widget.initialVy;
+
+    _ticker = createTicker((elapsed) {
+      if (!mounted) return;
+      final double currentTime = elapsed.inMicroseconds / 1e6;
+      if (!_initialized) {
+        _lastTime = currentTime;
+        _initialized = true;
+        return;
+      }
+      final double dt = currentTime - _lastTime;
+      _lastTime = currentTime;
+
+      final Size screenSize = MediaQuery.of(context).size;
+      final double screenWidth = screenSize.width;
+      final double screenHeight = screenSize.height;
+      final double blobSize = widget.radius * 2.0;
+
+      setState(() {
+        _x += _vx * dt;
+        _y += _vy * dt;
+
+        // Bounce off left / right edges
+        if (_x < 0) {
+          _x = 0;
+          _vx = _vx.abs();
+        } else if (_x + blobSize > screenWidth) {
+          _x = screenWidth - blobSize;
+          _vx = -_vx.abs();
+        }
+
+        // Bounce off top / bottom edges
+        if (_y < 0) {
+          _y = 0;
+          _vy = _vy.abs();
+        } else if (_y + blobSize > screenHeight) {
+          _y = screenHeight - blobSize;
+          _vy = -_vy.abs();
+        }
+      });
+    })..start();
+  }
+
+  @override
+  void dispose() {
+    _ticker.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: _x,
+      top: _y,
+      child: widget.child,
+    );
+  }
 }
