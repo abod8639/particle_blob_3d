@@ -175,20 +175,33 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
           ),
           
           // Main blob
-          Positioned(
-            child: ParticleBlob(
-              tapScaleFactor: 2.1,
-                gradient: LinearGradient(
-                colors: [_color1, _color2],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
+          Row(
+            children: [
+              ParticleBlob(
+                tapScaleFactor: 1.1,
+                  gradient: LinearGradient(
+                  colors: [_color1, _color2],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                particleCount: _particleCount,
+                radius: _baseRadius,
+                pointSize: _pointSize,
+                controller: _blobController,
               ),
-              particleCount: _particleCount,
-              radius: _baseRadius,
-              pointSize: _pointSize,
-              
-              controller: _blobController,
-            ),
+              ParticleBlob(
+                tapScaleFactor: 1.1,
+                  gradient: LinearGradient(
+                  colors: [_color1, _color2],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                particleCount: _particleCount,
+                radius: _baseRadius,
+                pointSize: _pointSize,
+                controller: _blobController,
+              ),
+            ],
           ),
           
           // UI Overlay
