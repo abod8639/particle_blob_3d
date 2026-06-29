@@ -165,6 +165,51 @@ void main() {
       );
     });
 
+    testWidgets('renders successfully with unbounded width constraints (e.g. inside Row)', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Row(
+              children: [
+                ParticleBlob(),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.byType(ParticleBlob), findsOneWidget);
+      expect(find.byType(CustomPaint), findsOneWidget);
+
+      final RenderBox renderBox = tester.renderObject(find.byType(ParticleBlob));
+      expect(renderBox.size.width, 300.0); // radius (150) * 2.0
+      // Height should be the height of the Scaffold body in tests (typically 600.0)
+      expect(renderBox.size.height, 600.0);
+    });
+
+    testWidgets('renders successfully with completely unbounded constraints (inside UnconstrainedBox)', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: UnconstrainedBox(
+              child: ParticleBlob(),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump();
+
+      expect(find.byType(ParticleBlob), findsOneWidget);
+      expect(find.byType(CustomPaint), findsOneWidget);
+
+      final RenderBox renderBox = tester.renderObject(find.byType(ParticleBlob));
+      expect(renderBox.size.width, 300.0); // radius (150) * 2.0
+      expect(renderBox.size.height, 300.0); // radius (150) * 2.0
+    });
+
     testWidgets('handles dynamic tapScaleFactor updates', (tester) async {
       await tester.pumpWidget(
         const MaterialApp(
